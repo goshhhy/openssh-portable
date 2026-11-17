@@ -34,10 +34,11 @@
 
 struct chachapoly_ctx {
 	struct chacha_ctx main_ctx, header_ctx;
+	u_int rounds;
 };
 
 struct chachapoly_ctx *
-chachapoly_new(const u_char *key, u_int keylen)
+chachapoly_new(const u_char *key, u_int keylen, u_int rounds)
 {
 	struct chachapoly_ctx *ctx;
 
@@ -47,6 +48,7 @@ chachapoly_new(const u_char *key, u_int keylen)
 		return NULL;
 	chacha_keysetup(&ctx->main_ctx, key, 256);
 	chacha_keysetup(&ctx->header_ctx, key + 32, 256);
+	ctx->rounds = rounds;
 	return ctx;
 }
 
@@ -82,7 +84,7 @@ chachapoly_crypt(struct chachapoly_ctx *ctx, u_int seqnr, u_char *dest,
 	POKE_U64(seqbuf, seqnr);
 	chacha_ivsetup(&ctx->main_ctx, seqbuf, NULL);
 	chacha_encrypt_bytes(&ctx->main_ctx,
-	    poly_key, poly_key, sizeof(poly_key));
+	    poly_key, poly_key, sizeof(poly_key), ctx->rounds);
 
 	/* If decrypting, check tag before anything else */
 	if (!do_encrypt) {
@@ -98,13 +100,13 @@ chachapoly_crypt(struct chachapoly_ctx *ctx, u_int seqnr, u_char *dest,
 	/* Crypt additional data */
 	if (aadlen) {
 		chacha_ivsetup(&ctx->header_ctx, seqbuf, NULL);
-		chacha_encrypt_bytes(&ctx->header_ctx, src, dest, aadlen);
+		chacha_encrypt_bytes(&ctx->header_ctx, src, dest, aadlen, ctx->rounds);
 	}
 
 	/* Set Chacha's block counter to 1 */
 	chacha_ivsetup(&ctx->main_ctx, seqbuf, one);
 	chacha_encrypt_bytes(&ctx->main_ctx, src + aadlen,
-	    dest + aadlen, len);
+	    dest + aadlen, len, ctx->rounds);
 
 	/* If encrypting, calculate and append tag */
 	if (do_encrypt) {
@@ -130,7 +132,7 @@ chachapoly_get_length(struct chachapoly_ctx *ctx,
 		return SSH_ERR_MESSAGE_INCOMPLETE;
 	POKE_U64(seqbuf, seqnr);
 	chacha_ivsetup(&ctx->header_ctx, seqbuf, NULL);
-	chacha_encrypt_bytes(&ctx->header_ctx, cp, buf, 4);
+	chacha_encrypt_bytes(&ctx->header_ctx, cp, buf, 4, ctx->rounds);
 	*plenp = PEEK_U32(buf);
 	return 0;
 }

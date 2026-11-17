@@ -69,6 +69,7 @@ struct sshcipher {
 	u_int	key_len;
 	u_int	iv_len;		/* defaults to block_size */
 	u_int	auth_len;
+	u_int	rounds;
 	u_int	flags;
 #define CFLAG_CBC		(1<<0)
 #define CFLAG_CHACHAPOLY	(1<<1)
@@ -85,28 +86,32 @@ struct sshcipher {
 static const struct sshcipher ciphers[] = {
 #ifdef WITH_OPENSSL
 #ifndef OPENSSL_NO_DES
-	{ "3des-cbc",		8, 24, 0, 0, CFLAG_CBC, EVP_des_ede3_cbc },
+	{ "3des-cbc",		8, 24, 0, 0, 0, CFLAG_CBC, EVP_des_ede3_cbc },
 #endif
-	{ "aes128-cbc",		16, 16, 0, 0, CFLAG_CBC, EVP_aes_128_cbc },
-	{ "aes192-cbc",		16, 24, 0, 0, CFLAG_CBC, EVP_aes_192_cbc },
-	{ "aes256-cbc",		16, 32, 0, 0, CFLAG_CBC, EVP_aes_256_cbc },
-	{ "aes128-ctr",		16, 16, 0, 0, 0, EVP_aes_128_ctr },
-	{ "aes192-ctr",		16, 24, 0, 0, 0, EVP_aes_192_ctr },
-	{ "aes256-ctr",		16, 32, 0, 0, 0, EVP_aes_256_ctr },
+	{ "aes128-cbc",		16, 16, 0, 0, 0, CFLAG_CBC, EVP_aes_128_cbc },
+	{ "aes192-cbc",		16, 24, 0, 0, 0, CFLAG_CBC, EVP_aes_192_cbc },
+	{ "aes256-cbc",		16, 32, 0, 0, 0, CFLAG_CBC, EVP_aes_256_cbc },
+	{ "aes128-ctr",		16, 16, 0, 0, 0, 0, EVP_aes_128_ctr },
+	{ "aes192-ctr",		16, 24, 0, 0, 0, 0, EVP_aes_192_ctr },
+	{ "aes256-ctr",		16, 32, 0, 0, 0, 0, EVP_aes_256_ctr },
 	{ "aes128-gcm@openssh.com",
-				16, 16, 12, 16, 0, EVP_aes_128_gcm },
+				16, 16, 12, 16, 0, 0, EVP_aes_128_gcm },
 	{ "aes256-gcm@openssh.com",
-				16, 32, 12, 16, 0, EVP_aes_256_gcm },
+				16, 32, 12, 16, 0, 0, EVP_aes_256_gcm },
 #else
-	{ "aes128-ctr",		16, 16, 0, 0, CFLAG_AESCTR, NULL },
-	{ "aes192-ctr",		16, 24, 0, 0, CFLAG_AESCTR, NULL },
-	{ "aes256-ctr",		16, 32, 0, 0, CFLAG_AESCTR, NULL },
+	{ "aes128-ctr",		16, 16, 0, 0, 0, CFLAG_AESCTR, NULL },
+	{ "aes192-ctr",		16, 24, 0, 0, 0, CFLAG_AESCTR, NULL },
+	{ "aes256-ctr",		16, 32, 0, 0, 0, CFLAG_AESCTR, NULL },
 #endif
 	{ "chacha20-poly1305@openssh.com",
-				8, 64, 0, 16, CFLAG_CHACHAPOLY, NULL },
-	{ "none",		8, 0, 0, 0, CFLAG_NONE, NULL },
+				8, 64, 0, 16, 20, CFLAG_CHACHAPOLY, NULL },
+	{ "chacha12-poly1305@linear.network",
+				8, 64, 0, 16, 12, CFLAG_CHACHAPOLY, NULL },
+	{ "chacha8-poly1305@linear.network",
+				8, 64, 0, 16, 8, CFLAG_CHACHAPOLY, NULL },
+	{ "none",		8, 0, 0, 0, 0, CFLAG_NONE, NULL },
 
-	{ NULL,			0, 0, 0, 0, 0, NULL }
+	{ NULL,			0, 0, 0, 0, 0, 0, NULL }
 };
 
 /*--*/
@@ -267,7 +272,7 @@ cipher_init(struct sshcipher_ctx **ccp, const struct sshcipher *cipher,
 
 	cc->cipher = cipher;
 	if ((cc->cipher->flags & CFLAG_CHACHAPOLY) != 0) {
-		cc->cp_ctx = chachapoly_new(key, keylen);
+		cc->cp_ctx = chachapoly_new(key, keylen, cc->cipher->rounds);
 		ret = cc->cp_ctx != NULL ? 0 : SSH_ERR_INVALID_ARGUMENT;
 		goto out;
 	}

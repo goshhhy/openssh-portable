@@ -59,3 +59,5 @@ check 3072 `${SSH} -Q cipher | grep 128`
 check 7680 `${SSH} -Q cipher | grep 192`
 check 8192 `${SSH} -Q cipher | grep 256`
 check 8192 chacha20-poly1305@openssh.com
+check 8192 chacha12-poly1305@linear.network
+check 8192 chacha8-poly1305@linear.network

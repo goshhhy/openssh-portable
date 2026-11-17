@@ -37,13 +37,15 @@ struct chachapoly_ctx {
 };
 
 struct chachapoly_ctx *
-chachapoly_new(const u_char *key, u_int keylen)
+chachapoly_new(const u_char *key, u_int keylen, u_int rounds)
 {
 	struct chachapoly_ctx *ctx;
 
 	if (keylen != (32 + 32)) /* 2 x 256 bit keys */
 		return NULL;
 	if ((ctx = calloc(1, sizeof(*ctx))) == NULL)
+		return NULL;
+	if (rounds != 20)
 		return NULL;
 	if ((ctx->main_evp = EVP_CIPHER_CTX_new()) == NULL ||
 	    (ctx->header_evp = EVP_CIPHER_CTX_new()) == NULL)

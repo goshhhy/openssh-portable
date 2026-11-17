@@ -28,7 +28,7 @@ void chacha_ivsetup(struct chacha_ctx *x, const u_char *iv, const u_char *ctr)
     __attribute__((__bounded__(__minbytes__, 2, CHACHA_NONCELEN)))
     __attribute__((__bounded__(__minbytes__, 3, CHACHA_CTRLEN)));
 void chacha_encrypt_bytes(struct chacha_ctx *x, const u_char *m,
-    u_char *c, u_int bytes)
+    u_char *c, u_int bytes, u_char rounds)
     __attribute__((__bounded__(__buffer__, 2, 4)))
     __attribute__((__bounded__(__buffer__, 3, 4)));
 
